@@ -34,12 +34,6 @@ classdef Vertex < handle
             
             disp("COLLISION");
             
-            old_links = obj.links;
-            
-            for i=1:6
-                obj.links(i) = old_links(opplink(i));
-            end
-            
         end
         
         %run one transport step
@@ -49,26 +43,8 @@ classdef Vertex < handle
             
             for i=1:6
                 
-                this_neighbor = obj.neighbors(i);
-                
-                opp = opplink(i);
-                
-                %If link i a particle on it, then the opposite (i+3 mod 6) link on
-                %neighbor i gets that particle
-                if obj.links(i) == 1
-                    
-                    obj.links(i) = 0;  % set this vertex's link value to zero since particle is leaving!
-                    this_neighbor.set_link(opp,1);  % set neighbor's link value
-                    
-                    obj.num_particles = obj.num_particles - 1;  % decrement this vertex's particle number
-                    this_neighbor.num_particles = this_neighbor.num_particles + 1;  % increment neighbor's particle number
-
-                else
-                    
-                    this_neighbor.links(opp) = 0;  % set neighbor's link value - def doesn't have a particle on it now!
-                    
-                end
-                
+                % neighbor stuff
+               
             end
                         
             
