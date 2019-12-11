@@ -4,64 +4,55 @@ classdef Vertex < handle
         
         x
         y
-        links
-        incoming
         neighbors
         num_particles
+        
+        incoming
+        outgoing
         
     end
     
     
     methods
         
-        %constructor method
+        %%% Constructor method
         function obj = Vertex(xcoord,ycoord)
+            
             obj.x = xcoord;
             obj.y = ycoord;
-            obj.links = zeros(6,1);
+        
             obj.neighbors = Vertex.empty(6,0);
+            obj.incoming = zeros(1,6);
+            obj.outgoing = zeros(1,6);
+            
         end
         
         
-        %set value of a link (either 0/false if no particle or 1/true if particle) - i is axis number
-        function obj = set_link(obj,i,val)
-            obj.links(i) = val;
-        end
         
-        
-        %run one collision step
+        %%% Run one collision step
+        % INCOMING particles to this vertex -> OUTGOING particles from this vertex
         function obj = collision(obj)
             
-            disp("COLLISION");
+            for i=1:6
+                incoming_value = obj.incoming(i);
+                obj.outgoing(opplink(i)) = incoming_value;
+                
+            end
             
         end
         
-        %run one transport step
+        
+        %%% Run one transport step
+        % OUTGOING particles from one vertex -> INCOMING particles to another vertex
         function obj = transport(obj)
             
-            disp("TRANSPORT");
+            %fprintf("TRANSPORT - (%d,%d)\n", obj.x, obj.y);
             
-            for i=1:6
-                
-                % neighbor stuff
-               
-            end
-                        
             
         end
         
         
-        
-        function disp_links(obj)
-            fprintf("Links of (%d,%d) : ", obj.x, obj.y);
-            for i=1:6
-                fprintf("%d ", obj.links(i));
-            end
-            fprintf("\n");
-        end
-        
-        
-        
+        %%% Display all neighbors of the vertex
         function disp_neighbors(obj)
             fprintf("Neighbors of (%d,%d) : ", obj.x, obj.y);
             for i=1:6
@@ -72,19 +63,17 @@ classdef Vertex < handle
         end
         
         
-        % Add particle at index i
-        function add_particle(obj,i)
-            
-            obj.num_particles = obj.num_particles + 1;
-            obj.links(i) = 1;
-            
+        %%% Display coordinates of the vertex
+        function disp_coords(obj)
+            fprintf("(%d, %d) \n",obj.x,obj.y);
         end
-        
         
     end
     
 end
 
+
+%%% Calculate index of "opposite" link
 function opp = opplink(i)
     opp = mod(i+3,6);
     if opp == 0

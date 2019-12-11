@@ -42,6 +42,7 @@ classdef Lattice < handle
             obj.vertices = varr;   
             
             obj.nullneighbor = Vertex(0,0);
+            obj.nullneighbor.neighbors = [obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor];
             
         end
         
@@ -57,13 +58,13 @@ classdef Lattice < handle
                     
                     v = obj.vertex(x,y);
                     
-                    % even rows
-                    if rem(y,2) == 0  %        (1)                (2)                  (3)               (4)               (5)                (6)
+                    % odd rows
+                    if rem(y,2) == 1  %        (1)                (2)                  (3)               (4)               (5)                (6)
                         v.neighbors = [ obj.vertex(x+1,y) obj.vertex(x+1,y+1) obj.vertex(x,y+1) obj.vertex(x-1,y) obj.vertex(x,y-1) obj.vertex(x+1,y-1) ];
                     end
                     
-                    % odd rows
-                    if rem(y,2) == 1  %        (1)                (2)                  (3)               (4)               (5)                (6)
+                    % even rows
+                    if rem(y,2) == 0  %        (1)                (2)                  (3)               (4)               (5)                (6)
                         v.neighbors = [ obj.vertex(x+1,y) obj.vertex(x,y+1) obj.vertex(x-1,y+1) obj.vertex(x-1,y) obj.vertex(x-1,y-1) obj.vertex(x,y-1) ];
                     end
                     
@@ -98,9 +99,9 @@ classdef Lattice < handle
             % assuming that y dimension is even (for purposes of southern border)
             
             
-            %%%  North / South  %%%
-            y_north = 1;
-            y_south = obj.dimy;
+            %%% ------ North / South ------ %%%
+            y_north = obj.dimy;
+            y_south = 1;
             
             for x=2:obj.dimx-1
                 
@@ -108,14 +109,14 @@ classdef Lattice < handle
                 vert_south = obj.vertex(x,y_south);
                 
                                      %   (1)               (2)                  (3)                 (4)               (5)                 (6)
-                vert_north.neighbors = [ obj.vertex(x+1,y) obj.nullneighbor     obj.nullneighbor    obj.vertex(x-1,y) obj.vertex(x-1,y-1) obj.vertex(x,y-1) ];
-                vert_south.neighbors = [ obj.vertex(x+1,y) obj.vertex(x+1,y+1)  obj.vertex(x,y+1)   obj.vertex(x-1,y) obj.nullneighbor    obj.nullneighbor ];
+                vert_north.neighbors = [ obj.vertex(x+1,y_north) obj.nullneighbor     obj.nullneighbor    obj.vertex(x-1,y_north) obj.vertex(x-1,y_north-1) obj.vertex(x,y_north-1) ];
+                vert_south.neighbors = [ obj.vertex(x+1,y_south) obj.vertex(x+1,y_south+1)  obj.vertex(x,y_south+1)   obj.vertex(x-1,y_south) obj.nullneighbor    obj.nullneighbor ];
                 
             end
             
             
             
-            %%%  East / West  %%%
+            %%% ------ East / West ------ %%%
             x_west = 1;
             x_east = obj.dimx;
             
@@ -126,14 +127,14 @@ classdef Lattice < handle
                 vert_west = obj.vertex(x_west,y);
 
                 % EVEN row
-                if rem(y,2) == 0        %   (1)               (2)               (3)                 (4)               (5)                 (6)
-                    vert_east.neighbors = [ obj.nullneighbor  obj.vertex(x,y+1) obj.vertex(x-1,y+1) obj.vertex(x-1,y) obj.vertex(x-1,y-1) obj.vertex(x,y-1) ];
-                    vert_west.neighbors = [ obj.vertex(x+1,y) obj.vertex(x,y+1) obj.nullneighbor    obj.nullneighbor  obj.nullneighbor    obj.vertex(x,y-1) ];
+                if rem(y,2) == 0        %   (1)                         (2)                     (3)                         (4)                     (5)                         (6)
+                    vert_east.neighbors = [ obj.nullneighbor            obj.vertex(x_east,y+1)  obj.vertex(x_east-1,y+1)    obj.vertex(x_east-1,y)  obj.vertex(x_east-1,y-1)    obj.vertex(x_east,y-1) ];
+                    vert_west.neighbors = [ obj.vertex(x_west+1,y) obj.vertex(x_west,y+1)  obj.nullneighbor            obj.nullneighbor        obj.nullneighbor            obj.vertex(x_west,y-1) ];
                     
                 % ODD row
-                elseif rem(y,2) == 1    %   (1)               (2)                 (3)               (4)                 (5)                 (6)
-                    vert_east.neighbors = [ obj.nullneighbor  obj.nullneighbor    obj.vertex(x,y+1) obj.vertex(x-1,y)   obj.vertex(x,y-1)   obj.nullneighbor];
-                    vert_west.neighbors = [ obj.vertex(x+1,y) obj.vertex(x+1,y+1) obj.vertex(x,y+1) obj.nullneighbor    obj.vertex(x,y-1)   obj.vertex(x+1,y-1) ];
+                elseif rem(y,2) == 1    %   (1)                     (2)                         (3)                     (4)                     (5)                     (6)
+                    vert_east.neighbors = [ obj.nullneighbor        obj.nullneighbor            obj.vertex(x_east,y+1)  obj.vertex(x_east-1,y)  obj.vertex(x_east,y-1)  obj.nullneighbor];
+                    vert_west.neighbors = [ obj.vertex(x_west+1,y)  obj.vertex(x_west+1,y+1)    obj.vertex(x_west,y+1)  obj.nullneighbor        obj.vertex(x_west,y-1)  obj.vertex(x_west+1,y-1) ];
                     
                 else
                 end
@@ -150,16 +151,41 @@ classdef Lattice < handle
             v = obj.vertices{y,x};
         end
         
+        %%% Display all neighbors
+        function disp_all_neighbors(obj)
+            for x=1:obj.dimx
+                for y=1:obj.dimy
+                    obj.vertex(x,y).disp_neighbors();
+                end
+            end
+            fprintf("\n\n--------------------------\n\n\n");
+        end
         
-        %%% Update lattice by one collision + transport step
-        function step_forward(obj)
+        
+        
+        function collide_all(obj)
             for x=1:obj.dimx
                 for y=1:obj.dimy
                     v = obj.vertex(x,y);
-                    v.collision(lattice);
-                    v.transport(lattice);
+                    v.collision();
                 end
             end
+        end
+        
+        function transport_all(obj)
+            for x=1:obj.dimx
+                for y=1:obj.dimy
+                    v = obj.vertex(x,y);
+                    v.transport();
+                end
+            end
+        end
+        
+        
+        %%% Update lattice by one transport step
+        function step_forward(obj)
+            obj.collide_all();
+            obj.transport_all();
         end
                 
         

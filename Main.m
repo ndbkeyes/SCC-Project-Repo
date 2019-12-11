@@ -4,27 +4,37 @@ function main
     clear all;
     close all;
 
-    %Import classes for vertices and lattice
-    import pkg.VertexOld.* 
-    import pkg.LatticeOld.*
-    
-    
+   
     % *** NOTE: lattice dimensions need to be EVEN and MORE THAN 2 ***
     % Create and fill lattice of vertices
-    lattice = Lattice(4,4,'open');
+    lattice = Lattice(6,6,'open');
     lattice.set_neighbors();
-   
-    % Display each vertex's neighbors
-    for x=1:lattice.dimx
-        for y=1:lattice.dimy
-            lattice.vertex(x,y).disp_neighbors();
-        end
+    lattice.disp_all_neighbors();
+    
+    
+    current = lattice.vertex(3,1);
+    current.outgoing(2) = 1;
+
+    current.disp_coords();
+    fprintf('%d %d %d %d %d %d\n', current.incoming.' );
+    fprintf('%d %d %d %d %d %d\n', current.outgoing.' );
+    
+    
+    for i=2:lattice.dimx
+        
+        % Move one to the right
+        current = current.neighbors(2);
+
+        current.disp_coords();
+
+         % Transport & show updated incoming
+        lattice.transport_all();
+        fprintf('%d %d %d %d %d %d\n', current.incoming.' );
+
+        % Collide & show updated outgoing
+        lattice.collide_all();
+        fprintf('%d %d %d %d %d %d\n', current.outgoing.' );
+        
     end
-    
-    
-    % NEED TO FIGURE OUT HOW TO DO TRANSPORTS SO THAT THEY DON"T CANCEL OUT
-    % maybe use separate array in vertices called "incoming" that then gets
-    % updated for each particle at the very end???
-    
    
 end
