@@ -199,6 +199,23 @@ classdef Lattice < handle
         
         
         
+        
+        %%% Set initial conditions - trying to simulate stone in pond???
+        function set_init(obj)
+            
+            for i=1:obj.dimx
+                for j=1:obj.dimy
+                    
+                    vertex = obj.vertex(i,j);
+                    vertex.outgoing = [1 0 0 0 0 0];
+                    
+                end
+            end
+            
+        end
+        
+        
+        
         %%% ----------------------------------------------------------- %%%
         %%% ----------------- PLOTTING CODE --------------------------- %%%
         %%% ----------------------------------------------------------- %%%

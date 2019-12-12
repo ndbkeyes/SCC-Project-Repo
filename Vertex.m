@@ -171,18 +171,20 @@ classdef Vertex < handle
 
             % Plot point at which vertex is located
             [x,y] = deal(obj.xphys,obj.yphys);
-            plot(x,y,'o','color',[0 0 0]);
+            % plot(x,y,'o','color',[0 0 0]);
             
             % Plot hexagon
-            fill([x+0.5,x+0.25,x-0.25,x-0.5,x-0.25,x+0.25,x+0.5],[y,y+0.5,y+0.5,y,y-0.5,y-0.5,y],[1, 1, (1 - obj.num_particles/6)]);
+            fill([x+0.5,x+0.25,x-0.25,x-0.5,x-0.25,x+0.25,x+0.5],[y,y+0.5,y+0.5,y,y-0.5,y-0.5,y],[1, 1, (1 - obj.num_particles/6)],'LineStyle','none');
             
             % Plot arrows representing outgoing particles
+            %{
             arrows = [ 1 0; 0.5 1; -0.5 1; -1 0; -0.5 -1; 0.5 -1] * obj.phys_scale/2;
             for i=1:6
                 if obj.outgoing(i) == 1
                     quiver(obj.xphys, obj.yphys, arrows(i,1), arrows(i,2),0,'MaxHeadSize',1.0,'color',[0 0 1]);
                 end
             end
+            %}
 
         end
         
