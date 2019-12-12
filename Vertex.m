@@ -2,11 +2,14 @@ classdef Vertex < handle
     
     properties (GetAccess = 'public', SetAccess = 'public')
         
-        x
-        y
+        xgrid
+        ygrid
+        xphys
+        yphys
+
         neighbors
-        num_particles
         
+        num_particles
         incoming
         outgoing
         
@@ -18,9 +21,22 @@ classdef Vertex < handle
         %%% Constructor method
         function obj = Vertex(xcoord,ycoord)
             
-            obj.x = xcoord;
-            obj.y = ycoord;
+            % ----- set computer grid coordinates of vertex ----- %
+            obj.xgrid = xcoord;
+            obj.ygrid = ycoord;
+            
+            % ----- set physical coordinates of vertex ----- %
+            phys_scale = 4;
+            obj.yphys = ycoord * phys_scale;
+            % odd rows
+            if rem(ycoord,2) == 1
+                obj.xphys = (xcoord + 0.5) * phys_scale;
+            % even rows
+            else
+                obj.xphys = xcoord * phys_scale;
+            end
         
+            % ----- create needed arrays ----- %
             obj.neighbors = Vertex.empty(6,0);
             obj.incoming = zeros(1,6);
             obj.outgoing = zeros(1,6);
@@ -33,11 +49,62 @@ classdef Vertex < handle
         % INCOMING particles to this vertex -> OUTGOING particles from this vertex
         function obj = collision(obj)
             
-            for i=1:6
-                incoming_value = obj.incoming(i);
-                obj.outgoing(opplink(i)) = incoming_value;
+            
+            % ----- 3-collisions: both -----
+            if isequal(obj.incoming, [1 0 1 0 1 0]) || isequal(obj.incoming, [0 1 0 1 0 1])
+                
+                % reflect back the same way!
+                obj.outgoing = obj.incoming;
+                
+                
+                
+                
+            % ----- 2-collision #1: (1,4) -----
+            elseif isequal(obj.incoming, [1 0 0 1 0 0])
+                
+                % choose randomly between scattering cases
+                if randi([0,1])
+                    obj.outgoing = [0 1 0 0 1 0];
+                else
+                    obj.outgoing = [0 0 1 0 0 1];
+                end
+                
+            % ----- 2-collision #2: (2,5) -----
+            elseif isequal(obj.incoming, [0 1 0 0 1 0])
+                
+                % choose randomly between scattering cases
+                if randi([0,1])
+                    obj.outgoing = [1 0 0 1 0 0];
+                else
+                    obj.outgoing = [0 0 1 0 0 1];
+                end
+                
+            % ----- 2-collision #3: (3,6) -----
+            elseif isequal(obj.incoming, [0 0 1 0 0 1])
+                
+                % choose randomly between scattering cases
+                if randi([0,1])
+                    obj.outgoing = [1 0 0 1 0 0];
+                else
+                    obj.outgoing = [0 1 0 0 1 0];
+                end
+                
+                
+                
+            % ----- NON-collision case ! -----
+            else
+                
+                % pass particles through directly
+                for i=1:3
+                    obj.outgoing(i) = obj.incoming(i+3);
+                    obj.outgoing(i+3) = obj.incoming(i);
+                end
                 
             end
+            
+            
+            % reset incoming array
+            obj.incoming = [0 0 0 0 0 0];                   
             
         end
         
@@ -46,8 +113,13 @@ classdef Vertex < handle
         % OUTGOING particles from one vertex -> INCOMING particles to another vertex
         function obj = transport(obj)
             
-            %fprintf("TRANSPORT - (%d,%d)\n", obj.x, obj.y);
+            for i=1:6
+                link_i = obj.outgoing(i);           % get value of ith outgoing link
+                n = obj.neighbors(i);               % get ith neighbor vertex
+                n.incoming( opplink(i) ) = link_i;  % set ith neighbor's incoming link to current outgoing link value
+            end
             
+            obj.outgoing = [0 0 0 0 0 0];           % reset outgoing array
             
         end
         
@@ -81,4 +153,3 @@ function opp = opplink(i)
     end
     %fprintf("opplink of %d = %d\n", i, opp);
 end
-

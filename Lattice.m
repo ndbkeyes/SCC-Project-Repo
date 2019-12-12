@@ -16,18 +16,21 @@ classdef Lattice < handle
         %%% Constructor method
         function obj = Lattice(dx,dy,bc)
             
-            % Requires that dx and dy be at least 2!
+            % Validate input: dimensions even and >= 2, bcopt open, closed, or wrap
             if dx < 2 || dy < 2
                 disp("Lattice dimension too small - must be at least 2 in each direction");
                 return
             end
-            
             if rem(dx,2) ~= 0 || rem(dy,2) ~= 0
                 disp("Lattice dimensions need to be even");
                 return
             end
+            if ~strcmp(bc,"open") && ~strcmp(bc,"closed") && ~strcmp(bc,"wrap")
+                disp("Lattice boundary condition invalid");
+                return
+            end
             
-            % Set dimensions of lattice
+            % Set dimensions and bcopt after verification
             obj.dimx = dx;
             obj.dimy = dy;
             obj.bcopt = bc;
@@ -41,6 +44,7 @@ classdef Lattice < handle
             end
             obj.vertices = varr;   
             
+            % Create nullneighbor with nullneighbor neighbors itself
             obj.nullneighbor = Vertex(0,0);
             obj.nullneighbor.neighbors = [obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor];
             
@@ -151,6 +155,7 @@ classdef Lattice < handle
             v = obj.vertices{y,x};
         end
         
+        
         %%% Display all neighbors
         function disp_all_neighbors(obj)
             for x=1:obj.dimx
@@ -162,7 +167,7 @@ classdef Lattice < handle
         end
         
         
-        
+        %%% Run collision on each vertex in lattice
         function collide_all(obj)
             for x=1:obj.dimx
                 for y=1:obj.dimy
@@ -172,6 +177,7 @@ classdef Lattice < handle
             end
         end
         
+        %%% Run transport on each vertex in lattice
         function transport_all(obj)
             for x=1:obj.dimx
                 for y=1:obj.dimy
