@@ -6,6 +6,7 @@ classdef Vertex < handle
         ygrid
         xphys
         yphys
+        phys_scale
 
         neighbors
         
@@ -19,21 +20,21 @@ classdef Vertex < handle
     methods
         
         %%% Constructor method
-        function obj = Vertex(xcoord,ycoord)
+        function obj = Vertex(xcoord,ycoord,scale)
             
             % ----- set computer grid coordinates of vertex ----- %
             obj.xgrid = xcoord;
             obj.ygrid = ycoord;
             
             % ----- set physical coordinates of vertex ----- %
-            phys_scale = 4;
-            obj.yphys = ycoord * phys_scale;
+            obj.phys_scale = scale;
+            obj.yphys = ycoord * scale;
             % odd rows
             if rem(ycoord,2) == 1
-                obj.xphys = (xcoord + 0.5) * phys_scale;
+                obj.xphys = (xcoord + 0.5) * scale;
             % even rows
             else
-                obj.xphys = xcoord * phys_scale;
+                obj.xphys = xcoord * scale;
             end
         
             % ----- create needed arrays ----- %
@@ -138,6 +139,28 @@ classdef Vertex < handle
         %%% Display coordinates of the vertex
         function disp_coords(obj)
             fprintf("(%d, %d) \n",obj.x,obj.y);
+        end
+        
+        
+        
+        
+        %%% ----------------------------------------------------------- %%%
+        %%% ----------------- PLOTTING CODE --------------------------- %%%
+        %%% ----------------------------------------------------------- %%%
+        
+        function plot_vertex(obj)
+
+            % Plot point at which vertex is located
+            plot(obj.xphys,obj.yphys,'o','color',[0 0 0]);
+            
+            % Plot arrows representing outgoing particles
+            arrows = [ 1 0; 0.5 1; -0.5 1; -1 0; -0.5 -1; 0.5 -1] * obj.phys_scale/2;
+            for i=1:6
+                if obj.outgoing(i) == 1
+                    quiver(obj.xphys, obj.yphys, arrows(i,1), arrows(i,2),0,'MaxHeadSize',1.0,'color',[0 0 1]);
+                end
+            end
+
         end
         
     end

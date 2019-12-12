@@ -4,79 +4,40 @@ function main
     clear all;
     close all;
     
-    import Vertex
-    import pkg.Lattice.*
-
-   
-    % *** NOTE: lattice dimensions need to be EVEN and MORE THAN 2 ***
+    
     % Create and fill lattice of vertices
-    lattice = Lattice(6,6,"open");
+    [xdim, ydim, plot_scale] = deal(6,6,1);
+    lattice = Lattice(xdim,ydim,"open",plot_scale);
     lattice.set_neighbors();
-    %lattice.disp_all_neighbors();
     
     
     
+    %%%% PLOTTING TESTING %%%%
+
+    % Set initial conditions through outgoing on certain vertices
+    c1 = lattice.vertex(3,2);
+    c2 = lattice.vertex(4,4);
+    c1.outgoing = [0 1 0 0 0 0];
+    c2.outgoing = [0 0 0 0 1 0];
     
-    %%%%% TRANSPORT TESTING %%%%%
-    %{ 
-    
-    % Set up and print first vertex info
-    current = lattice.vertex(1,1);
-    current.outgoing = [1 0 0 0 0 0];
-    current.disp_coords();
-    fprintf('%d %d %d %d %d %d\n', current.incoming.' );
-    fprintf('%d %d %d %d %d %d\n', current.outgoing.' );
-    
-    % Track particle through transport chain
-    for i=2:lattice.dimx
+    % Step forward in time
+    for i=1:10
         
-        % Move one to the right
-        current = current.neighbors(1);
-        current.disp_coords();
-
-         % Transport & show updated incoming
-        lattice.transport_all();
-        fprintf('%d %d %d %d %d %d\n', current.incoming.' );
-
-        % Collide & show updated outgoing
-        lattice.collide_all();
-        fprintf('%d %d %d %d %d %d\n', current.outgoing.' );
+        disp(i);
+        pause(0.5);
+        clf;
+        
+        % Plot current lattice
+        lattice.plot_lattice();
+        xlim([0 7]);
+        ylim([0 7]);
+        
+        % Step lattice forward by one - transport, then collide
+        lattice.step_forward();
         
     end
-    %}
     
     
-    
-    
-    %%%%% COLLISION TEST %%%%%%
-    
-    current = lattice.vertex(2,2);
-    current.incoming = [1 0 1 1 1 0];
-    
-    current.disp_coords();
-    fprintf('%d %d %d %d %d %d\n', current.incoming.' );
-    fprintf('%d %d %d %d %d %d\n', current.outgoing.' );
-    
-    lattice.collide_all();
-    
-    current.disp_coords();
-    fprintf('%d %d %d %d %d %d\n', current.incoming.' );
-    fprintf('%d %d %d %d %d %d\n', current.outgoing.' );
-    
-    lattice.transport_all();
-    
-    current = current.neighbors(1);
-    current.disp_coords();
-    fprintf('%d %d %d %d %d %d\n', current.incoming.' );
-    fprintf('%d %d %d %d %d %d\n', current.outgoing.' );
-    
-    lattice.collide_all();
-    
-    current.disp_coords();
-    fprintf('%d %d %d %d %d %d\n', current.incoming.' );
-    fprintf('%d %d %d %d %d %d\n', current.outgoing.' );
-    
-
 end
 
 

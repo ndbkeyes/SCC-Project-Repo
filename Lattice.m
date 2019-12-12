@@ -7,6 +7,7 @@ classdef Lattice < handle
         vertices
         bcopt
         nullneighbor
+        phys_scale
         
     end
     
@@ -14,7 +15,7 @@ classdef Lattice < handle
     methods
         
         %%% Constructor method
-        function obj = Lattice(dx,dy,bc)
+        function obj = Lattice(dx,dy,bc,scale)
             
             % Validate input: dimensions even and >= 2, bcopt open, closed, or wrap
             if dx < 2 || dy < 2
@@ -34,18 +35,19 @@ classdef Lattice < handle
             obj.dimx = dx;
             obj.dimy = dy;
             obj.bcopt = bc;
+            obj.phys_scale = scale;
             
             % Create vertex set
             varr = {};
             for y=1:obj.dimy
                 for x=1:obj.dimx
-                    varr{y,x} = Vertex(x,y);
+                    varr{y,x} = Vertex(x,y,obj.phys_scale);
                 end
             end
             obj.vertices = varr;   
             
             % Create nullneighbor with nullneighbor neighbors itself
-            obj.nullneighbor = Vertex(0,0);
+            obj.nullneighbor = Vertex(0,0,obj.phys_scale);
             obj.nullneighbor.neighbors = [obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor];
             
         end
@@ -190,8 +192,28 @@ classdef Lattice < handle
         
         %%% Update lattice by one transport step
         function step_forward(obj)
-            obj.collide_all();
             obj.transport_all();
+            obj.collide_all();
+            % *** ORDER IS KEY HERE !
+        end
+        
+        
+        
+        %%% ----------------------------------------------------------- %%%
+        %%% ----------------- PLOTTING CODE --------------------------- %%%
+        %%% ----------------------------------------------------------- %%%
+        
+        
+        function plot_lattice(lattice)
+            
+            hold on;
+
+            for x=1:lattice.dimx
+                for y=1:lattice.dimy
+                    lattice.vertex(x,y).plot_vertex();
+                end
+            end
+
         end
                 
         
