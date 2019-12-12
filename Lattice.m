@@ -41,13 +41,13 @@ classdef Lattice < handle
             varr = {};
             for y=1:obj.dimy
                 for x=1:obj.dimx
-                    varr{y,x} = Vertex(x,y,obj.phys_scale);
+                    varr{y,x} = Vertex(x,y,obj.phys_scale,obj.bcopt);
                 end
             end
             obj.vertices = varr;   
             
             % Create nullneighbor with nullneighbor neighbors itself
-            obj.nullneighbor = Vertex(0,0,obj.phys_scale);
+            obj.nullneighbor = Vertex(0,0,obj.phys_scale,obj.bcopt);
             obj.nullneighbor.neighbors = [obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor];
             
         end

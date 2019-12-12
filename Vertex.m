@@ -4,6 +4,8 @@ classdef Vertex < handle
         
         xgrid
         ygrid
+        bcopt
+        
         xphys
         yphys
         phys_scale
@@ -20,7 +22,7 @@ classdef Vertex < handle
     methods
         
         %%% Constructor method
-        function obj = Vertex(xcoord,ycoord,scale)
+        function obj = Vertex(xcoord,ycoord,scale,bc)
             
             % ----- set computer grid coordinates of vertex ----- %
             obj.xgrid = xcoord;
@@ -41,6 +43,9 @@ classdef Vertex < handle
             obj.neighbors = Vertex.empty(6,0);
             obj.incoming = zeros(1,6);
             obj.outgoing = zeros(1,6);
+            
+            obj.bcopt = bc;
+            obj.num_particles = 0;
             
         end
         
@@ -105,7 +110,11 @@ classdef Vertex < handle
             
             
             % reset incoming array
-            obj.incoming = [0 0 0 0 0 0];                   
+            obj.incoming = [0 0 0 0 0 0];    
+            
+            
+            % count up total number of particles outgoing from vertex
+            obj.num_particles = sum(obj.outgoing);
             
         end
         
@@ -115,9 +124,19 @@ classdef Vertex < handle
         function obj = transport(obj)
             
             for i=1:6
+                
                 link_i = obj.outgoing(i);           % get value of ith outgoing link
                 n = obj.neighbors(i);               % get ith neighbor vertex
-                n.incoming( opplink(i) ) = link_i;  % set ith neighbor's incoming link to current outgoing link value
+                
+                % Handle bounceback for closed border
+                if n.xgrid == 0 && n.ygrid == 0 && strcmp(obj.bcopt, "closed") && link_i == 1
+                    obj.incoming(i) = link_i;  % bounce back - send outgoing value to incoming on same link
+                    
+                % Transport as normal for interior points and/or open border
+                else
+                    n.incoming( opplink(i) ) = link_i;  % set ith neighbor's incoming link to current outgoing link value
+                end
+
             end
             
             obj.outgoing = [0 0 0 0 0 0];           % reset outgoing array
@@ -151,7 +170,11 @@ classdef Vertex < handle
         function plot_vertex(obj)
 
             % Plot point at which vertex is located
-            plot(obj.xphys,obj.yphys,'o','color',[0 0 0]);
+            [x,y] = deal(obj.xphys,obj.yphys);
+            plot(x,y,'o','color',[0 0 0]);
+            
+            % Plot hexagon
+            fill([x+0.5,x+0.25,x-0.25,x-0.5,x-0.25,x+0.25,x+0.5],[y,y+0.5,y+0.5,y,y-0.5,y-0.5,y],[1, 1, (1 - obj.num_particles/6)]);
             
             % Plot arrows representing outgoing particles
             arrows = [ 1 0; 0.5 1; -0.5 1; -1 0; -0.5 -1; 0.5 -1] * obj.phys_scale/2;
