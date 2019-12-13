@@ -6,25 +6,29 @@ function main
     
     
     % Create and fill lattice of vertices
-    [xdim, ydim, plot_scale] = deal(50,50,1);
+    % *** remember that lattice dimensions have to be even and greater than 2
+    [xdim, ydim, plot_scale] = deal(20,20,1);
     lattice = Lattice(xdim,ydim,"closed",plot_scale);
     lattice.set_neighbors();
-    lattice.set_init();
+    lattice.set_tracker(1,lattice.dimy);
     
     
-    
+    % Create figure
     fig = figure;
     im = {};
     axis tight manual % this ensures that getframe() returns a consistent size
     filename = 'testAnimated.gif';
     delay = 0.1;
+    fopen('PhaseTrajectory.txt','w');
     
-    %%% =========== TIMESTEPPING LOOP! ================
-    for i=1:50
+    
+    %%% =========== TIMESTEPPING LOOP! ============== %%%
+    
+    for t=1:100
         
-        % Clear plot, display
-        disp(i);
-        clf;
+        % Clear plot, display time
+        disp(t);
+        clf;        
         
         % Plot current lattice
         lattice.plot_lattice();
@@ -32,30 +36,38 @@ function main
         ylim([0 ydim+1]);
         pause(0.001);
         
-        % --- GET IMAGE INTO GIF ---
-        
+        % ---- SAVE IMAGE INTO GIF ----
         % get image
         frame = getframe(fig);
-        im{i} = frame2im(frame);
-        [A,map] = rgb2ind(im{i},256);
-        
+        im{t} = frame2im(frame);
+        [A,map] = rgb2ind(im{t},256);
         % write to file
-        if i == 1
+        if t == 1
             imwrite(A,map,filename,'gif','LoopCount',Inf,'DelayTime',delay);
         else
             imwrite(A,map,filename,'gif','WriteMode','append','DelayTime',delay);
         end
-
-        % --------------------------
-        
+        % ----------------------------
         
         % Step lattice forward by one (transport, then collide)
         lattice.step_forward();
         
+        % Drive cavity flow!
+        lattice.cavity_drive();
+        
+        
     end
     
     
+    
+    %%% ======== PLOT PHASE TRAJECTORY ======== %%%
+    data = csvread("PhaseTrajectory.txt");
+    disp(data);
+    
+    clf;
+    plot(data(:,1),data(:,2));
+    scatter(data(:,1),data(:,2),'filled');
+    saveas(gcf,"PhaseTrajectory_Plot.png");
+    
+    
 end
-
-
-

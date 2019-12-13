@@ -41,13 +41,17 @@ classdef Lattice < handle
             varr = {};
             for y=1:obj.dimy
                 for x=1:obj.dimx
-                    varr{y,x} = Vertex(x,y,obj.phys_scale,obj.bcopt);
+                    tracker = 0;
+                    if x == 1 && y == 1
+                        tracker = 2;
+                    end
+                    varr{y,x} = Vertex(x,y,obj.phys_scale,obj.bcopt,tracker);
                 end
             end
             obj.vertices = varr;   
             
             % Create nullneighbor with nullneighbor neighbors itself
-            obj.nullneighbor = Vertex(0,0,obj.phys_scale,obj.bcopt);
+            obj.nullneighbor = Vertex(0,0,obj.phys_scale,obj.bcopt,0);
             obj.nullneighbor.neighbors = [obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor];
             
         end
@@ -200,15 +204,47 @@ classdef Lattice < handle
         
         
         
-        %%% Set initial conditions - trying to simulate stone in pond???
-        function set_init(obj)
+        %%% set initial position of tracker particle
+        function set_tracker(obj,xtracker,ytracker)
             
-            for i=1:obj.dimx
-                for j=1:obj.dimy
+            for x=1:obj.dimx
+                for y=1:obj.dimy
                     
-                    vertex = obj.vertex(i,j);
+                    
+                    vertex = obj.vertex(x,y);
+                    
+                    %{
                     vertex.outgoing = [1 0 0 0 0 0];
                     
+                    % Set position of tracker
+                    [xtracker, ytracker] = deal(1,obj.dimy);
+                    if x == xtracker && y == ytracker
+                        vertex.outgoing(1) = 2;
+                    end
+                    %}
+                    
+                    % Set tracker on (1,dimy)
+                    if x == xtracker && y == ytracker
+                        vertex.outgoing(1) = 2;
+                    end
+                    
+                end
+            end
+            
+        end
+        
+        
+        
+        %%% Set driving force for cavity flow
+        function cavity_drive(obj)
+            
+            for x=1:obj.dimx 
+                
+                vertex = obj.vertex(x,obj.dimy);
+
+                % Set drive to the right
+                if vertex.outgoing(1) == 0
+                    vertex.outgoing(1) = 1;
                 end
             end
             

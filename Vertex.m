@@ -11,6 +11,7 @@ classdef Vertex < handle
         phys_scale
 
         neighbors
+        tracker_arr
         
         num_particles
         incoming
@@ -22,7 +23,7 @@ classdef Vertex < handle
     methods
         
         %%% Constructor method
-        function obj = Vertex(xcoord,ycoord,scale,bc)
+        function obj = Vertex(xcoord,ycoord,scale,bc,hastracker)
             
             % ----- set computer grid coordinates of vertex ----- %
             obj.xgrid = xcoord;
@@ -47,6 +48,9 @@ classdef Vertex < handle
             obj.bcopt = bc;
             obj.num_particles = 0;
             
+            % set tracker array - set tracker along 2nd link if it should have one
+            obj.tracker_arr = [0 hastracker 0 0 0 0];
+            
         end
         
         
@@ -56,65 +60,69 @@ classdef Vertex < handle
         function obj = collision(obj)
             
             
-            % ----- 3-collisions: both -----
-            if isequal(obj.incoming, [1 0 1 0 1 0]) || isequal(obj.incoming, [0 1 0 1 0 1])
-                
+            % CHECK FOR TRACKER before running collision!
+            tracker_index = 0;
+            if ismember(2,obj.outgoing)
+                tracker_index = find(obj.outgoing==2);
+            end
+            
+            
+            config_int = links_to_int(obj.incoming);
+            coll3 = (config_int == 42) || (config_int == 21);
+            coll2 = (config_int == 36) || (config_int == 18) || (config_int == 9);
+            
+
+            % ----- 3-collisions -----
+            if coll3
+
                 % reflect back the same way!
                 obj.outgoing = obj.incoming;
                 
+
+            % ----- 2-collisions -----
+            elseif coll2
                 
-                
-                
-            % ----- 2-collision #1: (1,4) -----
-            elseif isequal(obj.incoming, [1 0 0 1 0 0])
-                
+                shift = randi([-1,1]);
+
                 % choose randomly between scattering cases
-                if randi([0,1])
-                    obj.outgoing = [0 1 0 0 1 0];
-                else
-                    obj.outgoing = [0 0 1 0 0 1];
-                end
-                
-            % ----- 2-collision #2: (2,5) -----
-            elseif isequal(obj.incoming, [0 1 0 0 1 0])
-                
-                % choose randomly between scattering cases
-                if randi([0,1])
-                    obj.outgoing = [1 0 0 1 0 0];
-                else
-                    obj.outgoing = [0 0 1 0 0 1];
-                end
-                
-            % ----- 2-collision #3: (3,6) -----
-            elseif isequal(obj.incoming, [0 0 1 0 0 1])
-                
-                % choose randomly between scattering cases
-                if randi([0,1])
-                    obj.outgoing = [1 0 0 1 0 0];
-                else
-                    obj.outgoing = [0 1 0 0 1 0];
-                end
-                
+                obj.outgoing = circshift(obj.incoming,shift);
                 
                 
             % ----- NON-collision case ! -----
             else
-                
+
                 % pass particles through directly
                 for i=1:3
                     obj.outgoing(i) = obj.incoming(i+3);
                     obj.outgoing(i+3) = obj.incoming(i);
                 end
-                
+
             end
-            
-            
+
+
+
             % reset incoming array
             obj.incoming = [0 0 0 0 0 0];    
-            
-            
+
             % count up total number of particles outgoing from vertex
-            obj.num_particles = sum(obj.outgoing);
+            obj.num_particles = nnz(obj.outgoing);
+
+
+            % HANDLE TRACKER COLLISION separately
+            if tracker_index ~= 0
+                obj.outgoing(opplink(tracker_index)) = 2;
+            end
+
+            % Print vertex coordinates to file if tracker is outgoing from it
+            for i=1:6
+                if obj.outgoing(i) == 2
+                    outputFile = fopen('PhaseTrajectory.txt', 'a+');
+                    fprintf("Tracker at (%d,%d)\n",obj.xphys,obj.yphys);
+                    fprintf(outputFile,"%d,%d\n",obj.xphys,obj.yphys);
+                    fclose(outputFile);
+                end
+            end
+                
             
         end
         
@@ -129,8 +137,11 @@ classdef Vertex < handle
                 n = obj.neighbors(i);               % get ith neighbor vertex
                 
                 % Handle bounceback for closed border
-                if n.xgrid == 0 && n.ygrid == 0 && strcmp(obj.bcopt, "closed") && link_i == 1
+                if n.xgrid == 0 && n.ygrid == 0 && strcmp(obj.bcopt, "closed") && link_i ~= 0
                     obj.incoming(i) = link_i;  % bounce back - send outgoing value to incoming on same link
+                    
+                    %%% NEED TO FIX BOUNCEBACK - this sends it directly
+                    %%% back instead of reflecting with equal angle!!!
                     
                 % Transport as normal for interior points and/or open border
                 else
@@ -140,6 +151,8 @@ classdef Vertex < handle
             end
             
             obj.outgoing = [0 0 0 0 0 0];           % reset outgoing array
+            
+            
             
         end
         
@@ -169,22 +182,29 @@ classdef Vertex < handle
         
         function plot_vertex(obj)
 
-            % Plot point at which vertex is located
+            
             [x,y] = deal(obj.xphys,obj.yphys);
+            
+            % Plot point at which vertex is located
             % plot(x,y,'o','color',[0 0 0]);
             
             % Plot hexagon
-            fill([x+0.5,x+0.25,x-0.25,x-0.5,x-0.25,x+0.25,x+0.5],[y,y+0.5,y+0.5,y,y-0.5,y-0.5,y],[1, 1, (1 - obj.num_particles/6)],'LineStyle','none');
+            color_arr = [1, 1, (1 - obj.num_particles/6)];
+            if ismember(2,obj.outgoing)
+                color_arr = [0, 0, 0];
+            end
+            fill([x+0.5,x+0.25,x-0.25,x-0.5,x-0.25,x+0.25,x+0.5],[y,y+0.5,y+0.5,y,y-0.5,y-0.5,y],color_arr,'LineStyle','none');
             
             % Plot arrows representing outgoing particles
             %{
             arrows = [ 1 0; 0.5 1; -0.5 1; -1 0; -0.5 -1; 0.5 -1] * obj.phys_scale/2;
             for i=1:6
-                if obj.outgoing(i) == 1
+                if obj.outgoing(i) ~= 0
                     quiver(obj.xphys, obj.yphys, arrows(i,1), arrows(i,2),0,'MaxHeadSize',1.0,'color',[0 0 1]);
                 end
             end
             %}
+            
 
         end
         
@@ -200,4 +220,19 @@ function opp = opplink(i)
         opp = 6;
     end
     %fprintf("opplink of %d = %d\n", i, opp);
+end
+
+
+%%% Convert link array to number using binary
+function sum = links_to_int(links)
+
+    sum = 0;
+    power = 0;
+    for i=6:-1:1
+        if links(i) ~= 0
+            sum = sum + 2^power;
+        end
+        power = power + 1;
+    end
+    
 end
