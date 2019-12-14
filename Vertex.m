@@ -2,20 +2,19 @@ classdef Vertex < handle
     
     properties (GetAccess = 'public', SetAccess = 'public')
         
-        xgrid
-        ygrid
-        bcopt
+        xgrid           % x-coordinate of vertex in grid/computer space
+        ygrid           % y-coordinate of vertex in grid/computer space
+        bcopt           % String holding boundary condition to use for collisions
         
-        xphys
-        yphys
-        phys_scale
+        xphys           % x-coordinate of vertex in physical space
+        yphys           % y-coordinate of vertex in physical space
+        phys_scale      % scaling factor for plotting
 
-        neighbors
-        tracker_arr
+        neighbors       % Array of neighboring vertex objects    
         
-        num_particles
-        incoming
-        outgoing
+        num_particles   % Stores number of particles outgoing from vertex
+        incoming        % Array of incoming particle truth values
+        outgoing        % Array of outgoing particle truth values
         
     end
     
@@ -23,7 +22,7 @@ classdef Vertex < handle
     methods
         
         %%% Constructor method
-        function obj = Vertex(xcoord,ycoord,scale,bc,hastracker)
+        function obj = Vertex(xcoord,ycoord,scale,bc,bsize)
             
             % ----- set computer grid coordinates of vertex ----- %
             obj.xgrid = xcoord;
@@ -47,9 +46,6 @@ classdef Vertex < handle
             
             obj.bcopt = bc;
             obj.num_particles = 0;
-            
-            % set tracker array - set tracker along 2nd link if it should have one
-            obj.tracker_arr = [0 hastracker 0 0 0 0];
             
         end
         
@@ -117,7 +113,7 @@ classdef Vertex < handle
             for i=1:6
                 if obj.outgoing(i) == 2
                     outputFile = fopen('PhaseTrajectory.txt', 'a+');
-                    fprintf("Tracker at (%d,%d)\n",obj.xphys,obj.yphys);
+                    %fprintf("Tracker at (%d,%d)\n",obj.xphys,obj.yphys);
                     fprintf(outputFile,"%d,%d\n",obj.xphys,obj.yphys);
                     fclose(outputFile);
                 end
@@ -180,32 +176,59 @@ classdef Vertex < handle
         %%% ----------------- PLOTTING CODE --------------------------- %%%
         %%% ----------------------------------------------------------- %%%
         
-        function plot_vertex(obj)
-
+        function plot_vertex(obj,a)
             
+            % CHECK GRID VS PHYS
             [x,y] = deal(obj.xphys,obj.yphys);
-            
-            % Plot point at which vertex is located
-            % plot(x,y,'o','color',[0 0 0]);
-            
-            % Plot hexagon
+
+            % Plot ALL hexagons
+            %{
             color_arr = [1, 1, (1 - obj.num_particles/6)];
             if ismember(2,obj.outgoing)
                 color_arr = [0, 0, 0];
             end
             fill([x+0.5,x+0.25,x-0.25,x-0.5,x-0.25,x+0.25,x+0.5],[y,y+0.5,y+0.5,y,y-0.5,y-0.5,y],color_arr,'LineStyle','none');
-            
-            % Plot arrows representing outgoing particles
-            %{
-            arrows = [ 1 0; 0.5 1; -0.5 1; -1 0; -0.5 -1; 0.5 -1] * obj.phys_scale/2;
-            for i=1:6
-                if obj.outgoing(i) ~= 0
-                    quiver(obj.xphys, obj.yphys, arrows(i,1), arrows(i,2),0,'MaxHeadSize',1.0,'color',[0 0 1]);
-                end
-            end
             %}
             
+            % ONLY plot hexagon for tracker!
+            if ismember(2,obj.outgoing)
+                fill([x+0.5,x+0.25,x-0.25,x-0.5,x-0.25,x+0.25,x+0.5],[y,y+0.5,y+0.5,y,y-0.5,y-0.5,y],[ 0 0 0 ],'LineStyle','none');
+            end
+            
+            
+            % Plot point at which vertex is located
+            % plot(x,y,'o','color',[0 0 0]);
+            
+            % Plot arrows representing outgoing particles
+            if a
+                arrows = [ 1 0; 0.5 1; -0.5 1; -1 0; -0.5 -1; 0.5 -1] * obj.phys_scale/2;
+                for i=1:6
+                    if obj.outgoing(i) ~= 0
+                        quiver(x, y, arrows(i,1), arrows(i,2),0,'MaxHeadSize',1.0,'color',[0 0 1]);
+                    end
+                end
+            end
+            
 
+        end
+        
+        
+        %%% Sum up the direction vectors of links with outgoing particles
+        function vector = sum_links(obj)
+            
+            direction_vectors = [ 0.5, 0 ; 0.25, 0.5 ; -0.25, 0.5 ; -0.5, 0 ; -0.25, -0.5 ; 0.25, -0.5];
+            vector = [0,0];
+            
+            % Loop over links
+            for i=1:6
+
+                % Add appropriate direction vector if link is nonzero
+                if obj.outgoing(i) ~= 0
+                    vector = vector + direction_vectors(i,:);
+                end
+                
+            end
+            
         end
         
     end

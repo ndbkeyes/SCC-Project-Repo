@@ -7,10 +7,20 @@ function main
     
     % Create and fill lattice of vertices
     % *** remember that lattice dimensions have to be even and greater than 2
-    [xdim, ydim, plot_scale] = deal(20,20,1);
-    lattice = Lattice(xdim,ydim,"closed",plot_scale);
+    % *** AND block size should be that too!
+    xdim = 200;
+    ydim = 200;
+    bcopt = "closed";
+    plot_scale = 1;
+    block_size = 50;
+    prob = 0.25;
+    
+    lattice = Lattice(xdim,ydim,bcopt,plot_scale,block_size);
     lattice.set_neighbors();
-    lattice.set_tracker(1,lattice.dimy);
+    lattice.initialize(prob,1,lattice.dimy);
+    
+    
+    
     
     
     % Create figure
@@ -21,19 +31,26 @@ function main
     delay = 0.1;
     fopen('PhaseTrajectory.txt','w');
     
+    plot_arrows = 0;                    % YES plot the arrows on the lattice
+    
     
     %%% =========== TIMESTEPPING LOOP! ============== %%%
     
-    for t=1:100
+    tfinal = 50;
+    for t=1:tfinal
         
         % Clear plot, display time
         disp(t);
-        clf;        
+        
+        if t ~= tfinal
+            clf;
+        end
         
         % Plot current lattice
-        lattice.plot_lattice();
-        xlim([0 xdim+1]);
-        ylim([0 ydim+1]);
+
+        %lattice.plot_lattice(plot_arrows);
+        xlim([-2 xdim+1]);
+        ylim([-2 ydim+1]);
         pause(0.001);
         
         % ---- SAVE IMAGE INTO GIF ----
@@ -60,6 +77,7 @@ function main
     
     
     
+    %{
     %%% ======== PLOT PHASE TRAJECTORY ======== %%%
     data = csvread("PhaseTrajectory.txt");
     disp(data);
@@ -68,6 +86,12 @@ function main
     plot(data(:,1),data(:,2));
     scatter(data(:,1),data(:,2),'filled');
     saveas(gcf,"PhaseTrajectory_Plot.png");
+    %}
+    
+    hold on;
+    lattice.calc_vecfield(block_size);
+    xlim([-2 xdim+1]);
+    ylim([-2 ydim+1]);
     
     
 end

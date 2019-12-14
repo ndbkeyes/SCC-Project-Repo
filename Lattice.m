@@ -2,20 +2,31 @@ classdef Lattice < handle
     
     properties (GetAccess = 'public', SetAccess = 'public')
         
-        dimx
-        dimy
-        vertices
-        bcopt
-        nullneighbor
-        phys_scale
+        dimx                % Number of vertices in x direction on the lattice
+        dimy                % Number of vertices in y direction on the lattice
+        
+        vertices            % Array of vertex objects in the lattice
+        
+        bcopt               % String holding boundary condition to use
+        nullneighbor        % Vertex object that is null - coords (0,0)
+        phys_scale          % Scaling coefficient for plotting
+        
+        vector_field        % Matrix holding components of vector field
+        block_size          % Size of vector-field summing block in x and y
         
     end
     
     
     methods
         
+        
+        %%% ----------------------------------------------------------- %%%
+        %%% -------------- LATTICE SETUP ------------------------------ %%%
+        %%% ----------------------------------------------------------- %%%
+        
         %%% Constructor method
-        function obj = Lattice(dx,dy,bc,scale)
+        % inputs: dimension in x, dimension in y, boundary condition, scale for plotting, size of vector field blocks
+        function obj = Lattice(dx,dy,bc,scale,bsize)
             
             % Validate input: dimensions even and >= 2, bcopt open, closed, or wrap
             if dx < 2 || dy < 2
@@ -41,11 +52,7 @@ classdef Lattice < handle
             varr = {};
             for y=1:obj.dimy
                 for x=1:obj.dimx
-                    tracker = 0;
-                    if x == 1 && y == 1
-                        tracker = 2;
-                    end
-                    varr{y,x} = Vertex(x,y,obj.phys_scale,obj.bcopt,tracker);
+                    varr{y,x} = Vertex(x,y,scale,bc);
                 end
             end
             obj.vertices = varr;   
@@ -54,6 +61,12 @@ classdef Lattice < handle
             obj.nullneighbor = Vertex(0,0,obj.phys_scale,obj.bcopt,0);
             obj.nullneighbor.neighbors = [obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor];
             
+            
+            obj.block_size = bsize;
+            % Create empty vector field
+            % first coord is x, second is y, third is (1) tail x, (2) tail y, (3) displacement x, (4) displacement y
+            obj.vector_field = zeros(floor(obj.dimx/bsize),floor(obj.dimy/bsize),4);
+        
         end
         
         
@@ -125,7 +138,6 @@ classdef Lattice < handle
             end
             
             
-            
             %%% ------ East / West ------ %%%
             x_west = 1;
             x_east = obj.dimx;
@@ -161,7 +173,6 @@ classdef Lattice < handle
             v = obj.vertices{y,x};
         end
         
-        
         %%% Display all neighbors
         function disp_all_neighbors(obj)
             for x=1:obj.dimx
@@ -171,6 +182,13 @@ classdef Lattice < handle
             end
             fprintf("\n\n--------------------------\n\n\n");
         end
+        
+        
+        
+        
+        %%% ----------------------------------------------------------- %%%
+        %%% -------------- LOGIC -------------------------------------- %%%
+        %%% ----------------------------------------------------------- %%%
         
         
         %%% Run collision on each vertex in lattice
@@ -198,43 +216,48 @@ classdef Lattice < handle
         function step_forward(obj)
             obj.transport_all();
             obj.collide_all();
-            % *** ORDER IS KEY HERE !
+            % *** ORDER IS KEY HERE !!!
         end
         
         
         
+        %%% ----------------------------------------------------------- %%%
+        %%% -------------- ICs / BCs ---------------------------------- %%%
+        %%% ----------------------------------------------------------- %%%
         
-        %%% set initial position of tracker particle
-        function set_tracker(obj,xtracker,ytracker)
+        
+        %%% set initial conditions, incl tracker particle
+        function initialize(obj,prob,xtracker,ytracker)
             
             for x=1:obj.dimx
                 for y=1:obj.dimy
                     
-                    
                     vertex = obj.vertex(x,y);
-                    
-                    %{
-                    vertex.outgoing = [1 0 0 0 0 0];
-                    
-                    % Set position of tracker
-                    [xtracker, ytracker] = deal(1,obj.dimy);
-                    if x == xtracker && y == ytracker
-                        vertex.outgoing(1) = 2;
-                    end
-                    %}
                     
                     % Set tracker on (1,dimy)
                     if x == xtracker && y == ytracker
                         vertex.outgoing(1) = 2;
+                        
+                    % Otherwise, randomly initialize links w/ prob p
+                    else
+                        
+                        for i=1:6
+                            randn = rand(1);
+                            if randn > prob
+                                vertex.outgoing(i) = 1;
+                            end
+                        end
+                        
                     end
                     
                 end
             end
             
+            obj.cavity_drive();
+            
         end
         
-        
-        
+
         %%% Set driving force for cavity flow
         function cavity_drive(obj)
             
@@ -257,16 +280,61 @@ classdef Lattice < handle
         %%% ----------------------------------------------------------- %%%
         
         
-        function plot_lattice(lattice)
+        % Plot each vertex in the lattice
+        function plot_lattice(obj,a)
             
             hold on;
 
-            for x=1:lattice.dimx
-                for y=1:lattice.dimy
-                    lattice.vertex(x,y).plot_vertex();
+            for x=1:obj.dimx
+                for y=1:obj.dimy
+                    obj.vertex(x,y).plot_vertex(a);
                 end
             end
 
+        end
+        
+        
+        % Calculate vector field, adding up over blocks
+        function calc_vecfield(obj,block_size)
+            
+            % Loop over SW corners of full blocks
+            for x=1:block_size:(obj.dimx-block_size+1)
+                for y=1:block_size:(obj.dimy-block_size+1)
+                    
+                    block_vector = [0,0];
+                    
+                    % Get coordinates of center of block
+                    block_center = [0,0];
+
+                    % Loop over block elements
+                    for i=x:x+block_size-1
+                        for j=y:y+block_size-1
+                            
+                            % Add vertex's link vector sum to block total
+                            vertex = obj.vertex(i,j);
+                            vert_vector = vertex.sum_links();
+                            block_vector = block_vector + vert_vector;
+                            
+                            vert_coords = [vertex.xphys, vertex.yphys];
+                            block_center = block_center + vert_coords;
+                            
+                        end
+                    end
+                    
+                    % Calculate average vertex position to get center of the block!
+                    block_center = block_center ./ (block_size^2);                    
+                    
+                    % Plot vector field
+                    quiver(block_center(1),block_center(2),block_vector(1),block_vector(2),'color',[0 1 0],'MaxHeadSize',1);
+                    fprintf("Block center: (%.2f,%.2f), block vector: (%.2f, %.2f)\n",block_center(1),block_center(2),block_vector(1),block_vector(2));
+                    
+                    % fprintf("Block (%d,%d) vector: (%.2f,%.2f)\n",x,y,block_vector(1),block_vector(2));
+                    obj.vector_field((x+1)/2,(y+1)/2,:) = [block_center(1),block_center(2),block_vector(1),block_vector(2)];
+                    
+                end
+            end
+            
+            
         end
                 
         
