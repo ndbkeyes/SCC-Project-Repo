@@ -22,7 +22,7 @@ classdef Vertex < handle
     methods
         
         %%% Constructor method
-        function obj = Vertex(xcoord,ycoord,scale,bc,bsize)
+        function obj = Vertex(xcoord,ycoord,scale,bc)
             
             % ----- set computer grid coordinates of vertex ----- %
             obj.xgrid = xcoord;

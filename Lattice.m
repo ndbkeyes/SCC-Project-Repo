@@ -58,14 +58,11 @@ classdef Lattice < handle
             obj.vertices = varr;   
             
             % Create nullneighbor with nullneighbor neighbors itself
-            obj.nullneighbor = Vertex(0,0,obj.phys_scale,obj.bcopt,0);
+            obj.nullneighbor = Vertex(0,0,obj.phys_scale,obj.bcopt);
             obj.nullneighbor.neighbors = [obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor obj.nullneighbor];
             
             
             obj.block_size = bsize;
-            % Create empty vector field
-            % first coord is x, second is y, third is (1) tail x, (2) tail y, (3) displacement x, (4) displacement y
-            obj.vector_field = zeros(floor(obj.dimx/bsize),floor(obj.dimy/bsize),4);
         
         end
         
@@ -233,21 +230,27 @@ classdef Lattice < handle
                 for y=1:obj.dimy
                     
                     vertex = obj.vertex(x,y);
+
+                    %{
+                    for i=1:6
+                        vertex.outgoing = [0 0 0 0 0 0];
+                    end
                     
+                    %}
+                    
+                    
+                    % Randomly initialize links w/ prob p
+                    for i=1:6
+                        randn = rand(1);
+                        if randn < prob
+                            vertex.outgoing(i) = 1;
+                        end
+                    end
+                    
+
                     % Set tracker on (1,dimy)
                     if x == xtracker && y == ytracker
-                        vertex.outgoing(1) = 2;
-                        
-                    % Otherwise, randomly initialize links w/ prob p
-                    else
-                        
-                        for i=1:6
-                            randn = rand(1);
-                            if randn > prob
-                                vertex.outgoing(i) = 1;
-                            end
-                        end
-                        
+                        vertex.outgoing = [ 2 0 0 0 0 0 ];
                     end
                     
                 end
@@ -290,49 +293,100 @@ classdef Lattice < handle
                     obj.vertex(x,y).plot_vertex(a);
                 end
             end
-
+            
+            
         end
         
         
         % Calculate vector field, adding up over blocks
+        % vfx and vfy are counters for storage in vector field array
+        
         function calc_vecfield(obj,block_size)
             
-            % Loop over SW corners of full blocks
+            obj.vector_field = [];
+            norms = [];
+            
+            vfx = 1;
+            
+            % Loop over SW corners of blocks
             for x=1:block_size:(obj.dimx-block_size+1)
+
+                vfy = 1;
+                
                 for y=1:block_size:(obj.dimy-block_size+1)
                     
                     block_vector = [0,0];
                     
-                    % Get coordinates of center of block
+                    % Get coordinates of the center of block
                     block_center = [0,0];
 
                     % Loop over block elements
                     for i=x:x+block_size-1
                         for j=y:y+block_size-1
                             
-                            % Add vertex's link vector sum to block total
+                            % Add vertex's link vector sum to block's vector total
                             vertex = obj.vertex(i,j);
                             vert_vector = vertex.sum_links();
                             block_vector = block_vector + vert_vector;
-                            
+
+                            % Add vertex's coordinates to block's center total
                             vert_coords = [vertex.xphys, vertex.yphys];
                             block_center = block_center + vert_coords;
                             
                         end
                     end
                     
-                    % Calculate average vertex position to get center of the block!
-                    block_center = block_center ./ (block_size^2);                    
                     
-                    % Plot vector field
-                    quiver(block_center(1),block_center(2),block_vector(1),block_vector(2),'color',[0 1 0],'MaxHeadSize',1);
-                    fprintf("Block center: (%.2f,%.2f), block vector: (%.2f, %.2f)\n",block_center(1),block_center(2),block_vector(1),block_vector(2));
                     
-                    % fprintf("Block (%d,%d) vector: (%.2f,%.2f)\n",x,y,block_vector(1),block_vector(2));
-                    obj.vector_field((x+1)/2,(y+1)/2,:) = [block_center(1),block_center(2),block_vector(1),block_vector(2)];
+                    
+                    % Scale center and displacement vectors down by block size, to "average" them!
+                    block_center = block_center ./ (block_size^2);     
+                    block_vector = block_vector ./ (block_size^2);
+                    
+                    norms = [ norms, abs(block_vector(1)) ];
+                    
+                    % Append vector center x, center y, displacement x, and displacement y to vector field array
+                    vector_coords = [block_center(1),block_center(2),block_vector(1),block_vector(2)];
+                    obj.vector_field = [obj.vector_field; vector_coords];
+                    
+                    
+                    vfy =  vfy + 1;                    
                     
                 end
+                
+                vfx = vfx + 1;
+                
             end
+            
+          
+            % PLOT the vector field
+            
+            len = size(obj.vector_field,1);
+            sq_length = block_size / 2;
+            
+            
+            maxnorm = max(norms);
+            scale_factor = 1 / maxnorm * block_size;
+            
+            hold on;
+            for i=1:len
+                
+                centerx = obj.vector_field(i,1);
+                centery = obj.vector_field(i,2);
+                dx = obj.vector_field(i,3);
+                dy = obj.vector_field(i,4);
+                
+                sqcolor = abs(dx / maxnorm);
+                square_x = [ centerx-sq_length, centerx+sq_length, centerx+sq_length, centerx-sq_length ];
+                square_y = [ centery-sq_length, centery-sq_length, centery+sq_length, centery+sq_length ];
+                fill(square_x, square_y, [sqcolor sqcolor sqcolor] );
+                
+                quiver(centerx,centery,dx*scale_factor,dy*scale_factor,'color',[0 1 0],'MaxHeadSize',1); 
+                
+            
+                
+            end
+            
             
             
         end
